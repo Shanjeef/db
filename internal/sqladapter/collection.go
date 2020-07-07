@@ -34,6 +34,8 @@ type Collection interface {
 	// Find defined a new result set.
 	Find(conds ...interface{}) db.Result
 
+	Count() (uint64, error)
+
 	// Truncate removes all elements on the collection and resets the
 	// collection's IDs.
 	Truncate() error
@@ -98,6 +100,10 @@ func (c *collection) Session() db.Session {
 
 func (c *collection) Name() string {
 	return c.name
+}
+
+func (c *collection) Count() (uint64, error) {
+	return c.Find().Count()
 }
 
 func (c *collection) Insert(item interface{}) (*db.InsertResult, error) {
@@ -234,6 +240,10 @@ func (c *collection) InsertReturning(item interface{}) error {
 		goto cancel
 	}
 
+	if reflector, ok := item.(hasReflector); ok {
+		reflector.Reflect(item.(db.Model))
+	}
+
 	if !inTx {
 		// This is only executed if t.Session() was **not** a transaction and if
 		// sess was created with sess.NewTransaction().
@@ -324,6 +334,10 @@ func (c *collection) UpdateReturning(item interface{}) error {
 		}
 	default:
 		panic("default")
+	}
+
+	if reflector, ok := item.(hasReflector); ok {
+		reflector.Reflect(item.(db.Model))
 	}
 
 	if !inTx {

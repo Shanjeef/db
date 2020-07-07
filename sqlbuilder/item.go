@@ -1,9 +1,7 @@
-package sqladapter
+package sqlbuilder
 
 import (
 	"reflect"
-
-	"github.com/upper/db/sqlbuilder"
 
 	db "github.com/upper/db"
 )
@@ -12,13 +10,13 @@ type hasPrimaryKeys interface {
 	PrimaryKeys() []string
 }
 
-type hasReflector interface {
-	Reflect(db.Model)
-}
-
 type Item struct {
 	model    db.Model
 	pristine db.M
+}
+
+func (z *Item) Reflect(model db.Model) {
+	z.SetPristine(model)
 }
 
 func mapValues(model db.Model) db.M {
@@ -26,18 +24,14 @@ func mapValues(model db.Model) db.M {
 	if model == nil {
 		return m
 	}
-	fieldMap := sqlbuilder.Mapper.FieldMap(reflect.ValueOf(model))
+	fieldMap := Mapper.FieldMap(reflect.ValueOf(model))
 	for column := range fieldMap {
 		m[column] = fieldMap[column].Interface()
 	}
 	return m
 }
 
-func (z *Item) Reflect(model db.Model) {
-	z.SetPristine(model)
-}
-
-func newItem(sess Session, model db.Model) db.Item {
+func NewItem(sess Session, model db.Model) db.Item {
 	item := &Item{}
 	item.SetPristine(model)
 	return item
@@ -62,7 +56,7 @@ func (z *Item) Changes() db.M {
 
 func (z *Item) getPrimaryKeyFieldValues(sess db.Session) ([]string, []interface{}) {
 	pKeys := z.model.Collection(sess).(hasPrimaryKeys).PrimaryKeys()
-	fields := sqlbuilder.Mapper.FieldsByName(reflect.ValueOf(z.model), pKeys)
+	fields := Mapper.FieldsByName(reflect.ValueOf(z.model), pKeys)
 
 	values := make([]interface{}, 0, len(fields))
 	for i := range fields {
@@ -96,7 +90,6 @@ func (z *Item) id(sess db.Session) (db.Cond, error) {
 }
 
 func (z *Item) Save(sess db.Session) error {
-
 	if z.model == nil {
 		return db.ErrNilItem
 	}
